@@ -26,7 +26,7 @@ class UpdateFilePriceFile extends Command
 
         $this->newFilePath = storage_path('app/kievoptFile.xml');
         $this->processingFilePath = storage_path('app/kievoptFileProcessing.xml');
-        $this->processedFilePath = storage_path('app/kievoptFileProcessed.xml');
+        $this->processedFilePath = storage_path('app/public/kievoptFileProcessed.xml');
         $this->datesFilePath = storage_path('app/dates');
     }
 
