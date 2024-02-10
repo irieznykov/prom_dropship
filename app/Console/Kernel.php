@@ -11,7 +11,7 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('price:update')->everyFourHours();
+        $schedule->command('price:update')->everyTwoHours();
     }
 
     protected function commands(): void
