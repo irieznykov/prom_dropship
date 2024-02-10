@@ -43,9 +43,7 @@ class UpdateFilePriceFile extends Command
 
         $newDate = $this->getDate($this->newFilePath);
 
-        if (!Storage::disk('s3')->exists($this->datesFilePath)) {
-            Storage::disk('s3')->put($this->datesFilePath, $newDate);
-        } else {
+        if (Storage::disk('s3')->exists($this->datesFilePath)) {
             $oldDate = Storage::disk('s3')->get($this->datesFilePath);
 
             if ($newDate <= $oldDate) {
@@ -53,8 +51,9 @@ class UpdateFilePriceFile extends Command
                 return;
             }
         }
-
+        
         Log::info('[Price update]: Start processing');
+        Storage::disk('s3')->put($this->datesFilePath, $newDate);
         $processingFile = fopen(Storage::path($this->processingFilePath), 'a');
         $i = 1;
         foreach ($this->getItems($this->newFilePath) as $el) {
