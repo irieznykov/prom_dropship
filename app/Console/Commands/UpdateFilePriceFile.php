@@ -6,8 +6,8 @@ namespace App\Console\Commands;
 
 use Generator;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class UpdateFilePriceFile extends Command
@@ -24,10 +24,10 @@ class UpdateFilePriceFile extends Command
     {
         parent::__construct();
 
-        $this->newFilePath = storage_path('app/kievoptFile.xml');
-        $this->processingFilePath = storage_path('app/kievoptFileProcessing.xml');
-        $this->processedFilePath = storage_path('app/public/kievoptFileProcessed.xml');
-        $this->datesFilePath = storage_path('app/dates');
+        $this->newFilePath = 'kievoptFile.xml';
+        $this->processingFilePath = 'kievoptFileProcessing.xml';
+        $this->processedFilePath = 'kievoptFileProcessed.xml';
+        $this->datesFilePath = 'dates';
     }
 
     public function handle(): void
@@ -35,7 +35,7 @@ class UpdateFilePriceFile extends Command
         Log::info('[Price update]: Started');
         $t = microtime(true);
         $memory = memory_get_peak_usage(true) / 1024 / 1024;
-        if (!File::put($this->newFilePath, file_get_contents(self::URL))) {
+        if (!Storage::put($this->newFilePath, file_get_contents(self::URL))) {
             Log::info('[Price update]: Unable to store the file from kievopt', ['url' => self::URL]);
             return;
         }
@@ -43,10 +43,10 @@ class UpdateFilePriceFile extends Command
 
         $newDate = $this->getDate($this->newFilePath);
 
-        if (!File::exists($this->datesFilePath)) {
-            File::put($this->datesFilePath, $newDate);
+        if (!Storage::disk('s3')->exists($this->datesFilePath)) {
+            Storage::disk('s3')->put($this->datesFilePath, $newDate);
         } else {
-            $oldDate = File::get($this->datesFilePath);
+            $oldDate = Storage::disk('s3')->get($this->datesFilePath);
 
             if ($newDate <= $oldDate) {
                 Log::info('[Price update]: the new date isn\'t new', ['new_date' => $newDate, 'old_date' => $oldDate]);
@@ -55,7 +55,7 @@ class UpdateFilePriceFile extends Command
         }
 
         Log::info('[Price update]: Start processing');
-        $processingFile = fopen($this->processingFilePath, 'a');
+        $processingFile = fopen(Storage::path($this->processingFilePath), 'a');
         $i = 1;
         foreach ($this->getItems($this->newFilePath) as $el) {
             if (!$el) {
@@ -90,7 +90,7 @@ class UpdateFilePriceFile extends Command
 
         Log::info('[Price update]: Processed');
         if (fclose($processingFile)) {
-            File::move($this->processingFilePath, $this->processedFilePath);
+            Storage::disk('s3')->put($this->processedFilePath, Storage::get($this->processingFilePath));
             Log::info('[Price update]: File moved');
         }
 
@@ -99,7 +99,7 @@ class UpdateFilePriceFile extends Command
 
     protected function getItems(string $fileName): Generator
     {
-        if ($file = fopen($fileName, 'r')) {
+        if ($file = fopen(Storage::path($fileName), 'r')) {
             while(!feof($file)) {
                 yield fgets($file);
             }
@@ -110,7 +110,7 @@ class UpdateFilePriceFile extends Command
     protected function getDate(string $fileName): ?string
     {
         $i = 0;
-        if ($file = fopen($fileName, 'r')) {
+        if ($file = fopen(Storage::path($fileName), 'r')) {
             while (!feof($file)) {
                 $line = fgets($file);
                 if (Str::startsWith(trim($line), '<yml_catalog')) {
