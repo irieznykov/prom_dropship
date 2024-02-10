@@ -51,7 +51,7 @@ class UpdateFilePriceFile extends Command
                 return;
             }
         }
-        
+
         Log::info('[Price update]: Start processing');
         Storage::disk('s3')->put($this->datesFilePath, $newDate);
         $processingFile = fopen(Storage::path($this->processingFilePath), 'a');
