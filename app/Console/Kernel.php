@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('price:update')
             ->everyTwoHours()
             ->sendOutputTo(storage_path('logs/schedule.log'));
+        $schedule->command('price:update')
+            ->everyTwoHours(1)
+            ->sendOutputTo(storage_path('logs/schedule.log'));
     }
 
     protected function commands(): void
