@@ -43,13 +43,9 @@ class UpdateFilePriceFile extends Command
 
         $newDate = $this->getDate($this->newFilePath);
 
-        if (Storage::disk('s3')->exists($this->datesFilePath)) {
-            $oldDate = Storage::disk('s3')->get($this->datesFilePath);
-
-            if ($newDate <= $oldDate) {
-                Log::info('[Price update]: the new date isn\'t new', ['new_date' => $newDate, 'old_date' => $oldDate]);
-                return;
-            }
+        if (($oldDate = Storage::disk('s3')->get($this->datesFilePath)) && $newDate <= $oldDate) {
+            Log::info('[Price update]: the new date isn\'t new', ['new_date' => $newDate, 'old_date' => $oldDate]);
+            return;
         }
 
         Log::info('[Price update]: Start processing');
