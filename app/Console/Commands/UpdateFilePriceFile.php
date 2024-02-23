@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use Generator;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -41,15 +42,23 @@ class UpdateFilePriceFile extends Command
         }
         Log::info('[Price update]: New file stored');
 
+
         $newDate = $this->getDate($this->newFilePath);
 
-        if (($oldDate = Storage::disk('s3')->get($this->datesFilePath)) && $newDate <= $oldDate) {
+        if (($oldDate = DB::table('date')->first()) && $newDate <= $oldDate->date) {
             Log::info('[Price update]: the new date isn\'t new', ['new_date' => $newDate, 'old_date' => $oldDate]);
             return;
         }
 
         Log::info('[Price update]: Start processing');
-        Storage::disk('s3')->put($this->datesFilePath, $newDate);
+        if ($oldDate) {
+            DB::table('date')->where('id', $oldDate->id)
+                ->update(['date' => $newDate]);
+        } else {
+            DB::table('date')->insert(['date' => $newDate]);
+        }
+        Log::info('[Price update]: Date updated');
+
         $processingFile = fopen(Storage::path($this->processingFilePath), 'a');
         $i = 1;
         foreach ($this->getItems($this->newFilePath) as $el) {
