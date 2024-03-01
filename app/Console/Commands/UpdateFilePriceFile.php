@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use Generator;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,13 +14,12 @@ use Illuminate\Support\Str;
 
 class UpdateFilePriceFile extends Command
 {
-    protected const URL = 'http://kievopt.com.ua/prices/prom-20703.yml';
     protected $signature = 'price:update';
     protected $description = 'Updates the price file';
     private string $newFilePath;
     private string $processingFilePath;
     private string $processedFilePath;
-    private string $datesFilePath;
+    private array $config;
 
     public function __construct()
     {
@@ -28,7 +28,7 @@ class UpdateFilePriceFile extends Command
         $this->newFilePath = 'kievoptFile.xml';
         $this->processingFilePath = 'kievoptFileProcessing.xml';
         $this->processedFilePath = 'kievoptFileProcessed.xml';
-        $this->datesFilePath = 'dates';
+        $this->config = Config::get('price');
     }
 
     public function handle(): void
@@ -36,12 +36,11 @@ class UpdateFilePriceFile extends Command
         Log::info('[Price update]: Started');
         $t = microtime(true);
         $memory = memory_get_peak_usage(true) / 1024 / 1024;
-        if (!Storage::put($this->newFilePath, file_get_contents(self::URL))) {
-            Log::info('[Price update]: Unable to store the file from kievopt', ['url' => self::URL]);
+        if (!Storage::put($this->newFilePath, file_get_contents($this->config['kievopt']['url']))) {
+            Log::info('[Price update]: Unable to store the file from kievopt', ['url' => $this->config['kievopt']['url']]);
             return;
         }
         Log::info('[Price update]: New file stored');
-
 
         $newDate = $this->getDate($this->newFilePath);
 
@@ -76,7 +75,7 @@ class UpdateFilePriceFile extends Command
                         $text = $match[1] ?? null;
                     }
 
-                    $el = str_replace($text, "{$text} BS-03", $el);
+                    $el = str_replace($text, "{$text}{$this->config['kievopt']['name']}", $el);
                 }
             }
 
@@ -86,7 +85,7 @@ class UpdateFilePriceFile extends Command
                 if ($match) {
                     $text = $match[1] ?? null;
                 }
-                $el = str_replace($text, "{$text}-BS-03", $el);
+                $el = str_replace($text, "{$text}{$this->config['kievopt']['sku']}", $el);
             }
 
             fwrite($processingFile, $el);
